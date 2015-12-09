@@ -17,7 +17,7 @@ deployed/%: %
 deploy: build | $(DEPLOYED)
 
 run-test: deploy
-	adb shell "cd /data/local/tmp && LD_LIBRARY_PATH=. PYTHONHOME=/data/local/tmp/ PYTHONPATH=/data/local/tmp/stdlib.zip ./test"
+	adb shell "cd /data/local/tmp && LD_LIBRARY_PATH=. PYTHONHOME= PYTHONPATH=/data/local/tmp/stdlib.zip ./test"
 
 clean:
 	rm -rf deployed libs obj
