@@ -18,6 +18,9 @@ int main(int argc, char **argv) {
 
   auto main_py = "main.py";
   auto fd_main = fopen(main_py, "r");
+  if (!fd_main) {
+    return -1;
+  }
   auto error_code = PyRun_SimpleFile(fd_main, main_py);
   if (PyErr_Occurred() != nullptr) {
     PyErr_Print();

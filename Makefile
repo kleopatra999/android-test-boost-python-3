@@ -1,24 +1,30 @@
 
 COPY=$(wildcard copy/*)
 JNI=$(wildcard jni/*)
-LIBS=$(wildcard obj/local/armeabi/)
-DEPLOYED=$(addprefix deployed/,libs/armeabi copy)
+LIBS=$(shell ndk-build -n | grep install | awk '{print $$4}')
+DEPLOYED=$(addprefix deployed/,$(COPY) $(LIBS))
 
-all: copy/python | run-test
+all: run-test
 
-build:
-	ndk-build
+build: $(JNI)
+	ndk-build && touch build
 
 deployed/%: %
-	@adb push $< /data/local/tmp/
-	@mkdir -p `dirname $@`
-	@cp -rf $< $@
+	@echo -n "$<\t "
+	@adb push $< /data/local/tmp/ && \
+	mkdir -p `dirname $@` && \
+	cp -rf $< $@
 
 deploy: build | $(DEPLOYED)
 
 run-test: deploy
-	adb shell "cd /data/local/tmp && LD_LIBRARY_PATH=. PYTHONHOME= PYTHONPATH=/data/local/tmp/stdlib.zip ./test"
+	adb shell "cd /data/local/tmp && \
+	LD_LIBRARY_PATH+=:. \
+	LD_PRELOAD+=:libpython3.5m.so \
+	PYTHONHOME= \
+	PYTHONPATH+=:/data/local/tmp/stdlib.zip:. \
+	./test"
 
 clean:
-	rm -rf deployed libs obj
+	rm -rf deployed libs obj build
 	adb shell "rm -rf /data/local/tmp/*"

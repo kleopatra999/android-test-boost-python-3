@@ -8,23 +8,24 @@
 #include <boost/python/object.hpp>
 #include <boost/python/class.hpp>
 
+#include <iostream>
+
 using namespace boost::python;
 
-struct X
+struct Greeter
 {
-    int x;
-    X(int n) : x(n) { }
+    Greeter() {}
 };
 
-int x_function(X& x)
-{   return x.x;
-}
-
-
-BOOST_PYTHON_MODULE(class_ext)
+void greet(Greeter& greeter)
 {
-    class_<X>("X", init<int>());
-    def("x_function", x_function);
+    std::cout << "Hello from my_native_py.cpp!" << std::endl
+    << "My pointer is " << &greeter << std::endl;
 }
 
 
+BOOST_PYTHON_MODULE(libmy_native_py)
+{
+    class_<Greeter>("Greeter", init<>());
+    def("greet", greet);
+}
