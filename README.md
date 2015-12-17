@@ -1,9 +1,17 @@
 # Test Boost.Python on Android
 
+## Run
+
+If your `ndk-build` is in PATH and you have the CrystaX NDK all the dependencies
+of this package, you can build and run the test with
+
+    make python-copy && make
+
 ## Build
 
-You need to copy your prebuilt Python in the `copy/` directory
-such that your `copy/` directory looks somehow like this.
+You need to copy your prebuilt Python in the `copy/` directory.
+`make python-copy` does that job automatically if possible.
+After that your `copy/` directory looks somehow like this.
 
     copy/
     copy/site-packages
@@ -26,3 +34,5 @@ there is for example `python3.5-libs-armeabi.tar.xz`
 which contains exactly these files in some subdirectory.
 
 Run make and it will `ndk-build`, `adb push` and run the `test` executable.
+
+Look into the Makefile, see the .PHONY targets, change everything to your liking.
