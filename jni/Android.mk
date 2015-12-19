@@ -8,8 +8,8 @@ LOCAL_SHARED_LIBRARIES := boost_python3_shared python_shared
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE 	:= test
-LOCAL_SRC_FILES := test.cpp
+LOCAL_MODULE 	:= test-boost-python-3
+LOCAL_SRC_FILES := test-boost-python-3.cpp
 LOCAL_SHARED_LIBRARIES := python_shared
 include $(BUILD_EXECUTABLE)
 

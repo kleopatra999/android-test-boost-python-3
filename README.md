@@ -1,38 +1,37 @@
 # Test Boost.Python on Android
 
-## Run
+Output:
 
-If your `ndk-build` is in PATH and you have the CrystaX NDK all the dependencies
-of this package, you can build and run the test with
+    Hello from test.cpp!
+    Hello from main.py!
+    Hello from my_native_py.cpp!
 
-    make python-copy && make
+## How to build, install and run
 
-## Build
+    make && make install && make run
 
-You need to copy your prebuilt Python in the `copy/` directory.
-`make python-copy` does that job automatically if possible.
-After that your `copy/` directory looks somehow like this.
+You can also `make help` for a explanation of the `make` targets.
+`make` or `make ndk-build` compiles and links the files in `jni/`.
+`make install` pushes assets, python and outputs of `ndk-build` on the device
+into /data/local/tmp/test-boost-python-3.
+It creates a `install` cache for incrementally updating files on the device.
+`make run` runs the executable `test-boost-python-3` on the device.
+`make clean` removes everything execept the `install` cache.
+`make uninstall` removes the `install` cache and removes the project folder
+on the device.
 
-    copy/
-    copy/site-packages
-    copy/site-packages/README
-    copy/stdlib.zip
-    copy/python
-    copy/modules
-    copy/modules/unicodedata.so
-    copy/modules/_ctypes.so
-    copy/modules/select.so
-    copy/modules/_socket.so
-    copy/modules/_sqlite3.so
-    copy/modules/_multiprocessing.so
-    copy/modules/pyexpat.so
-    copy/main.py
-    copy/libpython3.5m.so
+`ndk-build` needs to be in PATH.
+CrystaX NDK dependencies:
 
-In the directory https://dl.crystax.net/ndk/linux/current/cache/android/
-there is for example `python3.5-libs-armeabi.tar.xz`
-which contains exactly these files in some subdirectory.
-
-Run make and it will `ndk-build`, `adb push` and run the `test` executable.
-
-Look into the Makefile, see the .PHONY targets, change everything to your liking.
+    arm-linux-androideabi-5-linux-x86_64.tar.xz
+    boost-1.59.0-build-files.tar.xz
+    boost-1.59.0-headers.tar.xz
+    boost-1.59.0-libs-gnu-5-armeabi.tar.xz
+    compiler-rt-libs-armeabi.tar.xz             # don't know
+    crystax-libs-armeabi.tar.xz
+    gabixx-libs-armeabi-g.tar.xz                # don't know
+    gnu-libstdc++-headers-5.tar.xz
+    gnu-libstdc++-libs-5-armeabi-g.tar.xz
+    libgccunwind-libs-armeabi.tar.xz
+    python3.5-headers.tar.xz
+    python3.5-libs-armeabi.tar.xz

@@ -1,4 +1,4 @@
-print("Hello from main.py!!")
+print("Hello from main.py!")
 
 import libmy_native_py as my
 greeter = my.Greeter()

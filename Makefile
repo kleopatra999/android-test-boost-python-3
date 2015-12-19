@@ -1,4 +1,4 @@
-PROJECT_NAME    = test
+PROJECT_NAME    = test-boost-python-3
 EXECUTABLE      = $(PROJECT_NAME)
 REMOTE          = /data/local/tmp/$(PROJECT_NAME)
 JNI             = $(shell find jni/ -type f)
@@ -48,7 +48,7 @@ ASSETS         += $(PYTHON_COPY)
 # The rule for pushing assets onto the device works fine with this.
 # The install cache doesn't need to fully copy python but can still
 # push incrementally to the device.
-$(shell ln -sf $(PYTHON_DIR) $(PYTHON_OUT))
+$(shell ln -sfrT $(PYTHON_DIR) $(PYTHON_OUT))
 endif
 
 endif
@@ -57,7 +57,7 @@ endif
 
 .PHONY: clean uninstall
 clean:
-	rm -rf libs obj .make
+	rm -rf libs obj .make assets/python
 uninstall:
 	adb shell "rm -rf $(REMOTE)"
 	rm -rf install

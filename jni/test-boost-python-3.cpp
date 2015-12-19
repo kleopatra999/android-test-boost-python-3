@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+// XXX payload: all the codecvt didn't compile and I didn't care
 //#include <codecvt>
 #include <Python.h>
 
@@ -10,7 +11,7 @@ int main(int argc, char **argv) {
   //wstring_convert <codecvt_utf8_utf16 <wchar_t>, wchar_t>
   //  utf8_utf16;
   
-  wchar_t *wargv[] = { L"/data/local/tmp/lib/armeabi/test", nullptr };
+  wchar_t *wargv[] = { L"test-boost-python-3", nullptr };
   
   cout << "Hello from test.cpp!" << endl;
 
