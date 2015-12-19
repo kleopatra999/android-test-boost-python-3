@@ -1,3 +1,5 @@
-deployed/
+.make/
+install/
+assets/python
 libs/
 obj/
