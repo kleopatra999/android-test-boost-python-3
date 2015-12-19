@@ -17,9 +17,8 @@ help:
 	@echo
 ifneq (,$(findstring help,$(MAKECMDGOALS)))
 $(info 'make' or 'make ndk-build' compiles and links the files in 'jni/'.)
-$(info 'make python-copy' looks for a python in the NDK and copies it into '$(PYTHON_OUT)'.)
 $(info 'make install' pushes assets, python and outputs of 'ndk-build' \
- on the device into $(REMOTE). It creates a 'install' cache for progressevly updating files on the device.)
+ on the device into $(REMOTE). It creates a 'install' cache for incrementally updating files on the device.)
 $(info 'make run' runs the executable '$(EXECUTABLE)' on the device.)
 $(info 'make clean' removes everything execept the 'install' cache.)
 $(info 'make uninstall' removes the 'install' cache and removes the project folder on the device.)
@@ -40,12 +39,16 @@ ifeq (,$(findstring clean,$(MAKECMDGOALS)))
 
 ifneq (,$(wildcard .make/*))
 $(info NDK_ROOT = $(NDK_ROOT))
-# local copy of deployed files to automate adb push
 PYTHON_DIR     ?= $(NDK_ROOT)/sources/python/3.5/libs/armeabi
 PYTHON_FILES   ?= $(shell find $(PYTHON_DIR) -type f)
 PYTHON_OUT      = assets/python
 PYTHON_COPY     = $(PYTHON_FILES:$(PYTHON_DIR)/%=$(PYTHON_OUT)/%)
 ASSETS         += $(PYTHON_COPY)
+# This softlinks python directly into assets/python.
+# The rule for pushing assets onto the device works fine with this.
+# The install cache doesn't need to fully copy python but can still
+# push incrementally to the device.
+$(shell ln -sf $(PYTHON_DIR) $(PYTHON_OUT))
 endif
 
 endif
@@ -121,20 +124,6 @@ install/libs/armeabi/libcrystax.so: .make/libcrystax.so
 ndk-build: libs/armeabi
 libs/armeabi: $(JNI)
 	ndk-build
-
-
-
-# python-copy
-#  You can change PYTHON_DIR. If it is the same as PYTHON_OUT
-#   this would cause circular dependencies. This ifneq avoids this.
-#  You can also hardlink instead of copy the files with 'cp -l'.
-.PHONY: python-copy
-python-copy: $(PYTHON_COPY)
-$(PYTHON_OUT): python-copy
-ifneq ($(abspath $(PYTHON_OUT)),$(abspath $(PYTHON_DIR)))
-$(PYTHON_OUT)/%: $(PYTHON_DIR)/%
-	mkdir -p $(dir $@) && cp -pf $< $@
-endif
 
 
 
