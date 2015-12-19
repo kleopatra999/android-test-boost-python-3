@@ -19,8 +19,7 @@ struct Greeter
 
 void greet(Greeter& greeter)
 {
-    std::cout << "Hello from my_native_py.cpp!" << std::endl
-    << "My pointer is " << &greeter << std::endl;
+    std::cout << "Hello from my_native_py.cpp!" << std::endl;
 }
 
 
