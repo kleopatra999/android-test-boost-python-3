@@ -1,9 +1,29 @@
-COPY    = $(wildcard copy/*)
-JNI     = $(shell find jni/ -type f)
+PROJECT_NAME    = test
+EXECUTABLE      = $(PROJECT_NAME)
+REMOTE          = /data/local/tmp/$(PROJECT_NAME)
+JNI             = $(shell find jni/ -type f)
+ASSETS          = $(shell find assets/ -type f)
+# The python folder which gets copied to the device.
+# The default path is relative to NDK_ROOT but can only be reliably set below.
+# You can still override the default here.
+# Default: $(NDK_ROOT)/sources/python/3.5/libs/armeabi
+#PYTHON_DIR      =
 
-.PHONY: all clean build deploy run-test python-copy python-clean
-.NOTPARALLEL: but you can still run ndk-build in parallel with -j or so
-all: run-test
+.PHONY: all
+all: ndk-build
+
+.PHONY: help
+help:
+	@echo
+ifneq (,$(findstring help,$(MAKECMDGOALS)))
+$(info 'make' or 'make ndk-build' compiles and links the files in 'jni/'.)
+$(info 'make python-copy' looks for a python in the NDK and copies it into '$(PYTHON_OUT)'.)
+$(info 'make install' pushes assets, python and outputs of 'ndk-build' \
+ on the device into $(REMOTE). It creates a 'install' cache for progressevly updating files on the device.)
+$(info 'make run' runs the executable '$(EXECUTABLE)' on the device.)
+$(info 'make clean' removes everything execept the 'install' cache.)
+$(info 'make uninstall' removes the 'install' cache and removes the project folder on the device.)
+endif
 
 # To get information out of ndk-build to build more incrementally
 #  I do some jumping through loops.
@@ -20,23 +40,24 @@ ifeq (,$(findstring clean,$(MAKECMDGOALS)))
 
 ifneq (,$(wildcard .make/*))
 $(info NDK_ROOT = $(NDK_ROOT))
-$(info OUTPUTS  = $(OUTPUTS))
-
 # local copy of deployed files to automate adb push
 PYTHON_DIR     ?= $(NDK_ROOT)/sources/python/3.5/libs/armeabi
 PYTHON_FILES   ?= $(shell find $(PYTHON_DIR) -type f)
-PYTHON_COPY     = $(PYTHON_FILES:$(PYTHON_DIR)/%=copy/%)
-DEPLOYED        = $(addprefix deployed/,$(COPY) $(OUTPUTS) $(PYTHON_COPY))
+PYTHON_OUT      = assets/python
+PYTHON_COPY     = $(PYTHON_FILES:$(PYTHON_DIR)/%=$(PYTHON_OUT)/%)
+ASSETS         += $(PYTHON_COPY)
 endif
 
 endif
 
 
-build: $(OUTPUTS)
-deploy: $(DEPLOYED)
+
+.PHONY: clean uninstall
 clean:
-	rm -rf deployed libs obj .make
-	adb shell "rm -rf /data/local/tmp/*"
+	rm -rf libs obj .make
+uninstall:
+	adb shell "rm -rf $(REMOTE)"
+	rm -rf install
 
 
 
@@ -45,6 +66,7 @@ clean:
 #  which is always needed but generally slow to acquire
 make-env: .make/outputs.mk .make/ndk-root.mk
 .make/outputs.mk .make/ndk-root.mk: | .make
+.make/%: | .make
 
 .make:
 	@mkdir .make
@@ -63,37 +85,74 @@ make-env: .make/outputs.mk .make/ndk-root.mk
 
 
 
+.PHONY: install
+install: install-libs install-assets
+
+INSTALL_OUTPUTS = $(addprefix install/,$(OUTPUTS:./%=%))
+INSTALL_ASSETS  = $(addprefix install/,$(ASSETS:./%=%))
+
+define install-adb-push =
+adb push $< $(REMOTE)$(@:install%=%)
+@mkdir -p $(dir $@) && touch $@
+endef
+
+.PHONY: install-libs
+install-libs: $(INSTALL_OUTPUTS)
+install/libs/armeabi/%: obj/local/armeabi/%
+	$(install-adb-push)
+
+.PHONY: install-assets
+install-assets: $(INSTALL_ASSETS)
+install/assets/%: assets/%
+	$(install-adb-push)
+
+# libs/armeabi/libcrystax.so
+#  is always touched by ndk-build,
+#  and resides only in the libs/ directory.
+# I deal with it separately and through a cached version.
+install/libs/armeabi/libcrystax.so: .make/libcrystax.so
+	$(install-adb-push)
+.make/libcrystax.so: libs/armeabi/libcrystax.so
+	@cmp -s $< $@ || ( cp $< $@ && echo cp $< $@ )
+
+
+
+.PHONY: ndk-build
+ndk-build: libs/armeabi
 libs/armeabi: $(JNI)
 	ndk-build
 
-$(OUTPUTS): libs/armeabi
 
-# deployed/%
-#   adb push and make local copy of deployed file to automate with make
-deployed/%: %
-	adb push $< /data/local/tmp/$(<:copy/%=%)
-	@mkdir -p $(dir $@) && touch $@
+
+# python-copy
+#  You can change PYTHON_DIR. If it is the same as PYTHON_OUT
+#   this would cause circular dependencies. This ifneq avoids this.
+#  You can also hardlink instead of copy the files with 'cp -l'.
+.PHONY: python-copy
+python-copy: $(PYTHON_COPY)
+$(PYTHON_OUT): python-copy
+ifneq ($(abspath $(PYTHON_OUT)),$(abspath $(PYTHON_DIR)))
+$(PYTHON_OUT)/%: $(PYTHON_DIR)/%
+	mkdir -p $(dir $@) && cp -pf $< $@
+endif
+
+
 
 # run-test
-#	 LD_LIBRARY_PATH+=:.                         # to find LD_PRELOADed library
-#	 LD_PRELOAD+=:libpython3.5m.so               # link python symbols such that native module (.so) finds those
-#	 PYTHONHOME=                                 # platform specific path prefixes. empty is enough for local python files.
-#	 PYTHONPATH+=:/data/local/tmp/stdlib.zip:.   # the import paths. note there is a zip with the standard library and the local path
-run-test: deploy
-	adb shell "                                 \
-	 cd /data/local/tmp &&                      \
-	 LD_LIBRARY_PATH+=:.                        \
-	 LD_PRELOAD+=:libpython3.5m.so              \
-	 PYTHONHOME=                                \
-	 PYTHONPATH+=:/data/local/tmp/stdlib.zip:.  \
-	 ./test"
-
-
-
-python-copy: $(PYTHON_COPY)
-
-python-clean:
-	rm -rf $(PYTHON_COPY)
-
-copy/%: $(PYTHON_DIR)/%
-	mkdir -p $(dir $@) && cp -rf $< $@
+#     LD_LIBRARY_PATH    # to find LD_PRELOADed library
+#     LD_PRELOAD         # link python symbols such that native module (.so) finds those
+#     PYTHONHOME         # platform specific path prefixes. empty is enough for local python files.
+#     PYTHONPATH         # the import paths. note there is a zip with the standard library and the local path
+#    MAIN_PY            # a path to the python file `test` will load and run, defaults to ../../assetes/main.py
+.PHONY: run
+run:
+	adb shell '                                             \
+	 cd $(REMOTE)/libs/armeabi &&                           \
+	 LD_LIBRARY_PATH+=:.                                    \
+	 LD_LIBRARY_PATH+=:$(REMOTE)/$(PYTHON_OUT)/             \
+	 LD_PRELOAD+=:libpython3.5m.so                          \
+	 PYTHONHOME=                                            \
+	 PYTHONPATH+=:$(REMOTE)/$(PYTHON_OUT)/stdlib.zip        \
+	 PYTHONPATH+=:$(REMOTE)/$(PYTHON_OUT)/                  \
+	 MAIN_PY=$(REMOTE)/assets/main.py                       \
+	 ./$(EXECUTABLE)'
