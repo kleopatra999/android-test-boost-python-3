@@ -3,7 +3,7 @@ JNI     = $(shell find jni/ -type f)
 
 .PHONY: all clean build deploy run-test python-copy python-clean
 .NOTPARALLEL: but you can still run ndk-build in parallel with -j or so
-all: run-test | make-env
+all: run-test
 
 # To get information out of ndk-build to build more incrementally
 #  I do some jumping through loops.
@@ -23,10 +23,10 @@ $(info NDK_ROOT = $(NDK_ROOT))
 $(info OUTPUTS  = $(OUTPUTS))
 
 # local copy of deployed files to automate adb push
-DEPLOYED        = $(addprefix deployed/,$(COPY) $(OUTPUTS))
 PYTHON_DIR     ?= $(NDK_ROOT)/sources/python/3.5/libs/armeabi
 PYTHON_FILES   ?= $(shell find $(PYTHON_DIR) -type f)
 PYTHON_COPY     = $(PYTHON_FILES:$(PYTHON_DIR)/%=copy/%)
+DEPLOYED        = $(addprefix deployed/,$(COPY) $(OUTPUTS) $(PYTHON_COPY))
 endif
 
 endif
@@ -63,15 +63,16 @@ make-env: .make/outputs.mk .make/ndk-root.mk
 
 
 
-$(OUTPUTS): $(JNI)
+libs/armeabi: $(JNI)
 	ndk-build
+
+$(OUTPUTS): libs/armeabi
 
 # deployed/%
 #   adb push and make local copy of deployed file to automate with make
 deployed/%: %
-	@echo -n "$<\t "
-	@adb push $< /data/local/tmp/ && \
-	mkdir -p $(dir $@) && cp -rf $< $@
+	adb push $< /data/local/tmp/$(<:copy/%=%)
+	@mkdir -p $(dir $@) && touch $@
 
 # run-test
 #	 LD_LIBRARY_PATH+=:.                         # to find LD_PRELOADed library
